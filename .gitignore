@@ -1,0 +1,33 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data and downloaded model weights
+outputs/
+recordings/
+frames/
+snapshots/
+frame.png
+*.pt
+*.onnx
+*.engine
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.aws/
+.codex/
+.agents/
+*.pem
+*.key
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+*~

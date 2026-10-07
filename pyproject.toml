@@ -1,0 +1,13 @@
+[project]
+name = "decisionai"
+version = "0.1.0"
+description = "Collect train livestream screenshots with YOLO and label them in a Tkinter review center."
+requires-python = ">=3.11"
+dependencies = [
+    "Pillow>=11",
+    "ultralytics>=8.4",
+    "yt-dlp[default]",
+]
+
+[tool.uv]
+package = false
