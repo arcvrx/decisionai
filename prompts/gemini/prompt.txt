@@ -1,0 +1,9 @@
+Analyze only the image labeled TARGET FRAME, across the entire frame rather than a selected box. Multiple operators may be visible at once.
+
+The other attached images are labeled visual REFERENCE EXAMPLES. Compare the target's visible railcar shapes, window layout, roof shape, livery and markings against them. References illustrate appearance only: never count their trains as present in the target, and never copy their labels just because they are attached. Night lighting can substantially change apparent colors. Track position alone does not identify an operator; COASTER can also appear on the left.
+
+Camera context supplied by the user: the target view is San Diego Depot. Long BNSF freight trains use the leftmost track; Pacific Surfliner sometimes also uses that track. The user reports parked Surfliner on the second track from the left and usually blue COASTER farther right. Treat these as contextual clues only; visible appearance and the reference examples take precedence when those clues conflict.
+
+Use visible evidence; lights, wires, platforms and buildings alone are not trains. Partial railcars may peek into the bottom edge. Do not infer movement or stationary status from a single frame. Do not assume a train is present from the location or the references.
+
+Report uncertainty rather than inventing livery details. Give independent presence estimates from 0 to 100 for each question; they need not sum to 100. Explain the visible evidence briefly, including which reference details support an identification or why it remains unclear. Do not report 100 solely because a train is on an expected track.

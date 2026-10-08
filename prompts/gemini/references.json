@@ -1,0 +1,19 @@
+[
+  {
+    "file": "references/coaster_day.png",
+    "operator": "coaster",
+    "description": "User-confirmed NCTD COASTER: the prominent blue train in the daytime frame. Background vehicles are not labeled by this reference."
+  },
+  {
+    "file": "references/coaster_night.png",
+    "operator": "coaster",
+    "description": "User-confirmed NCTD COASTER in a nighttime crop. Its colors look dark under nighttime lighting; do not mistake it for Surfliner simply because it is on the left.",
+    "source_question_id": "20261007T031748Z_6vn3ctbt/frame_00000290/train_1"
+  },
+  {
+    "file": "references/surfliner_night.png",
+    "operator": "pacific_surfliner",
+    "description": "User-confirmed Pacific Surfliner: the prominent train in this nighttime crop. The original full frame also had a distant MTS Trolley at the upper right; that background train is not the subject of this reference.",
+    "source_question_id": "20261007T032953Z_4reoh56t/frame_00001920/train_1"
+  }
+]

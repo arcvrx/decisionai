@@ -87,6 +87,46 @@ recording, wrapping back to earlier missed questions. The timeline displays
 the selected question's recording; its heading names that recording. Select an
 individual recording from the View menu for focused browsing.
 
+### Correct train boxes
+
+Select a question, then click **Edit / add / delete train boxes**. The editor
+shows every saved box in the full frame. Click a box to select it, drag a green
+corner to resize, or drag inside to move it. **New box** lets you drag a separate
+rectangle around a missing train; draw one tight box per visible train, including
+partially visible trains. **Delete selected box** removes false detections.
+Click **Save corrections**, or **Cancel** to discard the edits.
+
+New boxes get new question IDs. Changed crops become unanswered, so label them
+again; unchanged boxes keep their labels and original crops. Corrections do not
+carry over to neighboring frames. Corrected crops are made from the saved full
+JPEG frame and have no extra padding. Original detector results and crop files
+remain intact, and invalidated labels are retained in the annotation history.
+After saving, the pending filter is turned off so you can see all boxes in that
+frame; answering resumes the global review queue.
+
+Only check **I checked every visible train in this frame** after adding every
+missing train and removing all false boxes. This marks the frame's box annotation
+complete for future detector training. Deleting every box and checking this
+option records a reviewed negative frame. Saving edits without the check leaves
+the frame incomplete. This annotation collection does not yet retrain YOLO.
+
+### Reuse a box across frames
+
+Correct a box once, then click **Save box…** under **Reusable train boxes** and
+give it a name, such as `left freight` or `parked Surfliner`. Select it from the
+preset dropdown and click **Apply** to replace the current question's box, or
+**Add train** to create a separate question for a missing train in that frame.
+Other boxes in the frame are kept. Presets are saved in `recordings/box_presets.json`
+and use relative image coordinates so they also work at another resolution.
+
+For repeated labeling, enable **Apply preset when labeling (1–6)**: clicking
+an operator applies the selected rectangle to the current question and labels
+the resulting crop in one action, then advances through the queue. Unclear,
+false-detection, and skip answers do not apply the preset. Switch off the checkbox
+or select another preset when the train moves outside that fixed area. Presets
+do not track motion or automatically mark whole frames reviewed for detector
+training. Each operator choice still labels only the selected question.
+
 Click **Start image server** to share the `recordings/` folder using Python's
 built-in HTTP server on port 8000. On this computer, open
 `http://localhost:8000/`; on another computer on the same network, use
@@ -133,6 +173,15 @@ Each run gets a directory under `recordings/`, containing:
 - `frames/frame_NUMBER/frame_train_N.png`: original-resolution lossless crop.
 - `frames/frame_NUMBER/results.json`: detection coordinates and paths.
 - `frames/frame_NUMBER/labels.json`: your manual operator labels.
+- `frames/frame_NUMBER/annotations.json`: manual boxes, review status, and
+  invalidated label history; overrides `results.json` in the review queue.
+- `frames/frame_NUMBER/frame_corrected.jpg`: preview of all corrected boxes.
+- `frames/frame_NUMBER/frame_train_N_corrected_TIMESTAMP.png`: corrected crop.
+
+For edited frames, use `annotations.json` as the current boxes. `results.json`
+and `detections.jsonl` preserve the original detector output. Timeline question
+links follow corrected boxes, while its scores remain the original detection
+scores. Deleted questions are removed from the queue, not silently relabeled.
 
 Existing recordings and labels remain readable, including older JPEG crops.
 Older recordings show saved positive detections only; their empty intervals
@@ -154,6 +203,94 @@ The first detection run may download model weights.
 Operator classifier training and dataset splitting are not implemented yet.
 Keep neighboring frames of the same train together when building training/test
 sets to avoid inflated evaluation accuracy.
+
+## Winnow-E2B pilot
+
+To prepare a small test of labeled crops without launching the GUI:
+
+```bash
+uv run label.py --winnow-test --winnow-limit 60
+```
+
+To evaluate them against an already running Winnow-E2B server with vision:
+
+```bash
+uv run label.py --winnow-test --winnow-url http://localhost:8091 --winnow-limit 60
+```
+
+Use the GPU host's address instead of `localhost` for a remote server. Winnow is
+a separate runtime; this project does not install its model or server. Follow
+the [Winnow E2B setup](https://github.com/EldanRing/winnow-inference/blob/main/docs/E2B.md)
+and matching vision/projector instructions. This pilot calls `/v1/systemone`
+with native direct scoring and checks that the server reports E2B. It does not
+reproduce adaptive reasoning settings your friend may have used.
+
+Output is saved under `outputs/winnow_TIMESTAMP/`: `requests.jsonl` contains
+case IDs, reference answers, and image requests; only the nested `request` is
+sent to the model. `responses.jsonl` stores predictions and `summary.json`
+reports train-presence results at several thresholds and operator confusion.
+The human labels are never changed. The pilot balances available classes and
+keeps at most one sample per class/run/30-second interval. This reduces repeated
+frames but is not a held-out accuracy benchmark. Skipped and unclear labels
+are excluded. Model scores are not guaranteed probabilities of correctness.
+
+## Gemini full-frame test
+
+The labeler automatically loads the project’s Git-ignored `.env` file.
+Get a key from [Google AI Studio](https://aistudio.google.com/apikey) and fill in:
+
+```dotenv
+GEMINI_API_KEY=your_api_key
+GEMINI_MODEL=gemini-3.5-flash-lite
+```
+
+No environment-file argument or new Python dependency is needed. `GEMINI_MODEL`
+is optional; existing shell environment settings take precedence over `.env`.
+The supported Flash free tier has quotas; model availability and limits depend
+on your project. Check [Google’s pricing](https://ai.google.dev/gemini-api/docs/pricing).
+
+Test the latest saved full frame or choose an image:
+
+```bash
+uv run label.py --gemini-test
+uv run label.py --gemini-frame recordings/RUN/frames/frame_NUMBER/frame.jpg
+uv run label.py --gemini-frame frame.png --gemini-context camera_description.txt
+```
+
+In `uv run label.py`, click **Test full frame: Gemini**. The request runs in the
+background and displays independent operator presence estimates and a short
+explanation. It analyzes the clean full frame, including trains outside the
+selected box, and saves `outputs/gemini_TIMESTAMP/result.json`. It never changes
+human labels or images. Cloudflare settings and Clef commands are no longer used.
+
+Multiple operators can score high simultaneously. Additional estimates cover
+any train, multiple trains, partial railcars at the bottom, and unclear operators.
+These percentages are model-generated estimates, not calibrated probabilities;
+they do not sum to 100%. One frame cannot establish whether a train is stationary.
+The editable prompt lives in `prompts/gemini/prompt.txt`. Labeled examples are
+listed in `prompts/gemini/references.json`, with their images in
+`prompts/gemini/references/`. Both GUI and CLI tests load these automatically,
+independent of the terminal's working directory. The initial examples are a
+daytime COASTER frame, a nighttime COASTER crop, and a nighttime Surfliner crop,
+confirmed by the user. Reference trains are explicitly excluded from target
+counts. References are sent with each request, not permanent model training.
+Results record the reference filenames, labels, descriptions and image sizes.
+Keep reference examples separate from images used to evaluate accuracy; testing
+the same image used as a reference is not an independent evaluation. Add or
+replace examples by editing the manifest; keep paths inside the prompt folder.
+The app allows at most 12 examples and caps the encoded request at 18 MiB.
+Images are compressed as JPEG with a maximum side of 1920 pixels. Requests use
+Google’s [Interactions API](https://ai.google.dev/gemini-api/docs/interactions-overview)
+and [structured JSON output](https://ai.google.dev/gemini-api/docs/structured-output),
+with `store=false`. Credentials and encoded images are not saved in reports.
+Free-tier submissions may still be used to improve Google’s products under its
+API terms. The default prompt includes the user's San Diego Depot observations:
+long BNSF freight on the leftmost track (also sometimes used by Surfliner), parked
+Surfliner on the second track from the left, and usually blue COASTER trains
+farther right. These are contextual clues, not guaranteed identifications; a
+single image cannot establish whether a train is stationary. Optional scene
+context adds to those defaults. This is a manual experiment, not automatic
+classification during recording.
 
 ## Code organization
 
